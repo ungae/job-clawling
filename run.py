@@ -53,7 +53,7 @@ def main():
     filtered_posts = [p for p in uniq_posts if not is_career_only(p)]
     print(f"[Filter] {before}개 수집 -> 경력 제외 후 {len(filtered_posts)}개")
     html = generate_html(filtered_posts, keywords)
-    out_path = os.path.abspath('job_dashboard.html')
+    out_path = os.path.abspath('index.html')
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
     print(f"[Done] Open {out_path} in any web browser.")
