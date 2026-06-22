@@ -75,10 +75,9 @@ def main():
         p.score = score_job(p)
         
     filtered_posts.sort(key=lambda x: x.score, reverse=True)
-    top_100 = filtered_posts[:100]
     
-    print(f"[Filter] {before}개 수집 -> 경력 제외 후 {len(filtered_posts)}개 -> Top 100 추출")
-    html = generate_html(top_100, keywords)
+    print(f"[Filter] {before}개 수집 -> 경력 제외 후 {len(filtered_posts)}개")
+    html = generate_html(filtered_posts, keywords)
     out_path = os.path.abspath('index.html')
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
