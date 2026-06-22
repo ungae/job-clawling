@@ -218,6 +218,41 @@ def crawl_linkareer(keyword: str, max_results: int) -> List[JobPosting]:
 
 
 # ────────────────────────────────────────────
+# 점핏 (JSON API)
+# ────────────────────────────────────────────
+def crawl_jumpit(keyword: str, max_results: int) -> List[JobPosting]:
+    postings: List[JobPosting] = []
+    page = 1
+    while len(postings) < max_results:
+        url = CONFIG['sites']['jumpit'].format(
+            keyword=urllib.parse.quote(keyword),
+            page=page
+        )
+        try:
+            data = fetch_json(url)
+        except Exception:
+            break
+        
+        jobs = data.get('result', {}).get('positions', [])
+        if not jobs:
+            break
+            
+        for job in jobs:
+            company = job.get('companyName', 'N/A')
+            title = job.get('title', 'N/A')
+            tech_stacks = job.get('techStacks', [])
+            requirements = ','.join(tech_stacks) if tech_stacks else 'N/A'
+            closed_at = job.get('closedAt', '')
+            deadline = closed_at[:10].replace('-', '.') if closed_at else '상시'
+            job_id = job.get('id')
+            link = f'https://www.jumpit.co.kr/position/{job_id}' if job_id else '#'
+            postings.append(JobPosting(company, title, requirements, deadline, link))
+            
+        page += 1
+    return postings[:max_results]
+
+
+# ────────────────────────────────────────────
 # 통합 진입점
 # ────────────────────────────────────────────
 CRAWLERS = {
@@ -225,6 +260,7 @@ CRAWLERS = {
     'jobkorea':  crawl_jobkorea,
     'wanted':    crawl_wanted,
     'linkareer': crawl_linkareer,
+    'jumpit':    crawl_jumpit,
 }
 
 def search_site(site_key: str, keyword: str) -> List[JobPosting]:

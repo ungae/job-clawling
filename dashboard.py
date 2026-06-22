@@ -209,6 +209,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .site-jobkorea  { background: rgba(0,198,255,0.12);  color: #6ee7ff; border: 1px solid rgba(0,198,255,0.25); }
     .site-wanted    { background: rgba(108,99,255,0.15); color: #b0aaff; border: 1px solid rgba(108,99,255,0.3); }
     .site-linkareer { background: rgba(67,233,123,0.12); color: #5debb8; border: 1px solid rgba(67,233,123,0.25); }
+    .site-jumpit    { background: rgba(0,210,130,0.12); color: #00d282; border: 1px solid rgba(0,210,130,0.25); }
     .site-other     { background: rgba(255,255,255,0.07); color: var(--text-muted); border: 1px solid var(--border); }
 
     .dl-urgent { color: #ff8fa5; font-weight: 600; }
@@ -225,6 +226,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .link-btn:hover { background: rgba(108,99,255,0.3); transform: scale(1.05); }
 
     .empty-state { text-align: center; padding: 48px; color: var(--text-muted); }
+
+    /* 페이지네이션 */
+    .pagination { display: flex; justify-content: center; gap: 6px; padding: 24px 0 10px; flex-wrap: wrap; }
+    .page-btn {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 6px 14px; border-radius: 8px;
+      cursor: pointer; transition: 0.2s; font-family: inherit; font-size: 13px; font-weight: 500;
+    }
+    .page-btn:hover:not(:disabled) { background: rgba(255,255,255,0.12); color: #fff; }
+    .page-btn.active { background: rgba(108,99,255,0.3); color: #fff; border-color: rgba(108,99,255,0.5); }
+    .page-btn:disabled { opacity: 0.3; cursor: not-allowed; }
 
     @keyframes fadeUp {
       from { opacity: 0; transform: translateY(14px); }
@@ -284,6 +296,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         <p style="font-size:28px; margin-bottom:10px;">🔍</p>
         <p>검색 결과가 없습니다.</p>
       </div>
+      <div id="pagination" class="pagination"></div>
     </div>
   </div>
 
@@ -336,9 +349,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
   });
 
-  // ── 정렬 상태 ──
+  // ── 정렬 상태 및 페이지 ──
   let sortCol = null;
   let sortAsc = true;
+  let currentPage = 1;
+  const PAGE_SIZE = 50;
 
   function deadlineSort(dl) {
     if (!dl || dl === '-' || dl === '상시') return 'zzz';
@@ -367,6 +382,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
         sortCol = col;
         sortAsc = true;
       }
+      currentPage = 1; // 정렬 시 1페이지로
       // 모든 헤더 초기화
       document.querySelectorAll('th.sortable').forEach(el => {
         el.classList.remove('asc', 'desc');
@@ -386,6 +402,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       '잡코리아': 'site-jobkorea',
       '원티드':   'site-wanted',
       '링커리어': 'site-linkareer',
+      '점핏':     'site-jumpit',
     }[site] || 'site-other';
     return '<span class="site-badge ' + cls + '">' + site + '</span>';
   }
@@ -416,6 +433,37 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     </tr>`;
   }
 
+  // ── 페이지네이션 렌더 ──
+  function renderPagination(totalItems) {
+    const totalPages = Math.ceil(totalItems / PAGE_SIZE);
+    const pag = document.getElementById('pagination');
+    if (totalPages <= 1) {
+      pag.innerHTML = '';
+      return;
+    }
+    let html = `<button class="page-btn" onclick="goToPage(${currentPage - 1})" ${currentPage === 1 ? 'disabled' : ''}>이전</button>`;
+    
+    let start = Math.max(1, currentPage - 3);
+    let end = Math.min(totalPages, currentPage + 3);
+    
+    if (start > 1) html += `<button class="page-btn" onclick="goToPage(1)">1</button>${start > 2 ? '<span style="color:#8b90a7;padding:5px;">...</span>' : ''}`;
+    
+    for (let i = start; i <= end; i++) {
+      html += `<button class="page-btn ${i === currentPage ? 'active' : ''}" onclick="goToPage(${i})">${i}</button>`;
+    }
+    
+    if (end < totalPages) html += `${end < totalPages - 1 ? '<span style="color:#8b90a7;padding:5px;">...</span>' : ''}<button class="page-btn" onclick="goToPage(${totalPages})">${totalPages}</button>`;
+    
+    html += `<button class="page-btn" onclick="goToPage(${currentPage + 1})" ${currentPage === totalPages ? 'disabled' : ''}>다음</button>`;
+    pag.innerHTML = html;
+  }
+
+  window.goToPage = function(p) {
+    currentPage = p;
+    renderTable();
+    document.querySelector('.card').scrollIntoView({ behavior: 'smooth' });
+  };
+
   // ── 렌더 ──
   function renderTable() {
     const q = document.getElementById('searchInput').value.trim().toLowerCase();
@@ -429,14 +477,21 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     if (data.length === 0) {
       tbody.innerHTML = '';
       empty.style.display = 'block';
+      document.getElementById('pagination').innerHTML = '';
     } else {
-      tbody.innerHTML = data.map((j, i) => makeRow(j, i + 1)).join('');
+      const startIdx = (currentPage - 1) * PAGE_SIZE;
+      const pageData = data.slice(startIdx, startIdx + PAGE_SIZE);
+      tbody.innerHTML = pageData.map((j, i) => makeRow(j, startIdx + i + 1)).join('');
       empty.style.display = 'none';
+      renderPagination(data.length);
     }
     document.getElementById('visibleCount').textContent = data.length;
   }
 
-  document.getElementById('searchInput').addEventListener('input', renderTable);
+  document.getElementById('searchInput').addEventListener('input', () => {
+    currentPage = 1;
+    renderTable();
+  });
   renderTable();
 </script>
 </body>
@@ -452,6 +507,8 @@ def _detect_site(link: str) -> str:
         return '원티드'
     elif 'linkareer' in link:
         return '링커리어'
+    elif 'jumpit.co.kr' in link:
+        return '점핏'
     return '기타'
 
 
