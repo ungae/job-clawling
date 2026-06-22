@@ -225,6 +225,20 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     }
     .link-btn:hover { background: rgba(108,99,255,0.3); transform: scale(1.05); }
 
+    /* 찜하기 기능 */
+    .star-btn { cursor: pointer; user-select: none; font-size: 18px; opacity: 0.3; transition: 0.2s; }
+    .star-btn:hover { opacity: 0.8; transform: scale(1.2); }
+    .star-btn.active { opacity: 1; text-shadow: 0 0 8px rgba(255, 215, 0, 0.5); }
+    
+    .btn-bookmark-filter {
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+      color: var(--text-muted); padding: 0 16px; border-radius: 8px;
+      cursor: pointer; transition: 0.2s; font-family: inherit; font-size: 14px; font-weight: 500;
+      display: flex; align-items: center; gap: 6px; height: 42px; white-space: nowrap;
+    }
+    .btn-bookmark-filter:hover { background: rgba(255,255,255,0.1); }
+    .btn-bookmark-filter.active { background: rgba(255,215,0,0.15); color: #ffd700; border-color: rgba(255,215,0,0.4); }
+
     .empty-state { text-align: center; padding: 48px; color: var(--text-muted); }
 
     /* 페이지네이션 */
@@ -266,9 +280,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   </div>
 
   <div class="card">
-    <div class="card-title">채용 공고 목록</div>
-    <div class="toolbar">
-      <input id="searchInput" type="text" placeholder="회사명 · 포지션 · 역량으로 검색...">
+    <div class="card-title">채용 공고 목록
+      <div style="display:flex; gap:12px; margin-bottom:20px; align-items:center; flex-wrap:wrap;">
+        <input type="text" id="searchInput" class="search-input" placeholder="기업명, 포지션, 스택 검색 (예: PM, 카카오, 기획)...">
+        <button id="btnFilterBookmark" class="btn-bookmark-filter" onclick="toggleBookmarkFilter()">⭐ 찜한 공고만</button>
+      </div>
       <div class="result-count"><b id="visibleCount">0</b>건 표시 중</div>
     </div>
     <div class="table-wrap">
@@ -395,6 +411,28 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     });
   });
 
+  // ── 찜하기 (로컬스토리지) ──
+  let bookmarks = JSON.parse(localStorage.getItem('job_bookmarks') || '[]');
+  let showOnlyBookmarks = false;
+
+  window.toggleBookmark = function(link) {
+    if (bookmarks.includes(link)) {
+      bookmarks = bookmarks.filter(b => b !== link);
+    } else {
+      bookmarks.push(link);
+    }
+    localStorage.setItem('job_bookmarks', JSON.stringify(bookmarks));
+    // 현재 스크롤 유지하며 렌더링
+    renderTable(true);
+  };
+
+  window.toggleBookmarkFilter = function() {
+    showOnlyBookmarks = !showOnlyBookmarks;
+    document.getElementById('btnFilterBookmark').classList.toggle('active', showOnlyBookmarks);
+    currentPage = 1;
+    renderTable();
+  };
+
   // ── 행 생성 ──
   function siteBadge(site) {
     const cls = {
@@ -415,10 +453,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   }
   function makeRow(job, no) {
     const dc = dlClass(job.deadline);
+    const isBookmarked = bookmarks.includes(job.link);
+    const starStr = isBookmarked ? '⭐' : '☆';
+    const starClass = isBookmarked ? 'star-btn active' : 'star-btn';
+    
     return `<tr>
       <td class="col-no">${no}</td>
       <td class="col-co">${job.company}</td>
-      <td class="col-pos">${job.title}</td>
+      <td class="col-pos"><span class="${starClass}" onclick="toggleBookmark('${job.link}')">${starStr}</span> ${job.title}</td>
       <td class="col-site">${siteBadge(job.site)}</td>
       <td class="col-sdate">-</td>
       <td class="col-edate"><span class="${dc}">${job.deadline}</span></td>
@@ -465,11 +507,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   };
 
   // ── 렌더 ──
-  function renderTable() {
+  function renderTable(keepScroll = false) {
     const q = document.getElementById('searchInput').value.trim().toLowerCase();
     let data = q ? ALL_JOBS.filter(j =>
       (j.company + j.title + j.requirements).toLowerCase().includes(q)
     ) : ALL_JOBS;
+    
+    if (showOnlyBookmarks) {
+      data = data.filter(j => bookmarks.includes(j.link));
+    }
+    
     data = getSorted(data);
 
     const tbody = document.getElementById('tableBody');
@@ -481,9 +528,17 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     } else {
       const startIdx = (currentPage - 1) * PAGE_SIZE;
       const pageData = data.slice(startIdx, startIdx + PAGE_SIZE);
+      
+      // 스크롤 유지를 위해 html 변경 전 스크롤 위치 저장
+      const scrollTop = window.scrollY;
+      
       tbody.innerHTML = pageData.map((j, i) => makeRow(j, startIdx + i + 1)).join('');
       empty.style.display = 'none';
       renderPagination(data.length);
+      
+      if (keepScroll) {
+        window.scrollTo(0, scrollTop);
+      }
     }
     document.getElementById('visibleCount').textContent = data.length;
   }
