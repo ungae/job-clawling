@@ -231,6 +231,6 @@ def search_site(site_key: str, keyword: str) -> List[JobPosting]:
     crawler = CRAWLERS.get(site_key)
     if crawler is None:
         return []
-    # 키워드-사이트 조합당 최대 50개, run.py 전체 합산으로 max_results 제어
-    per_kw = 50
+    # 한도를 대폭 상향하여 사실상 무제한으로 수집 (키워드/사이트당 최대 200개 제한으로 무한 루프 방지)
+    per_kw = 200
     return crawler(keyword, per_kw)

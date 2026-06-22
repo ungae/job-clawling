@@ -31,16 +31,11 @@ def main():
     cfg = load_config()
     keywords = cfg['keywords']
     all_posts: List[JobPosting] = []
-    # 모든 사이트에서 고르게 수집하도록 사이트별 한도 계산
-    max_per_site = cfg['max_results'] // len(cfg['sites'])
+    
     for site_key in cfg['sites']:
-        site_posts = []
         for kw in keywords:
             posts = search_site(site_key, kw)
-            site_posts.extend(posts)
-            if len(site_posts) >= max_per_site:
-                break
-        all_posts.extend(site_posts[:max_per_site])
+            all_posts.extend(posts)
     # deduplicate by (company, title, link)
     seen = set()
     uniq_posts: List[JobPosting] = []
