@@ -284,6 +284,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div style="display:flex; gap:12px; margin-bottom:20px; align-items:center; flex-wrap:wrap;">
         <input type="text" id="searchInput" class="search-input" placeholder="기업명, 포지션, 스택 검색 (예: PM, 카카오, 기획)...">
         <button id="btnFilterBookmark" class="btn-bookmark-filter" onclick="toggleBookmarkFilter()">⭐ 찜한 공고만</button>
+        <button id="btnFilterNewcomer" class="btn-bookmark-filter" style="border-color: rgba(93,235,184,0.3);" onclick="toggleNewcomerFilter()">🌱 신입/무관 공고만</button>
       </div>
       <div class="result-count"><b id="visibleCount">0</b>건 표시 중</div>
     </div>
@@ -435,6 +436,23 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     renderTable();
   };
 
+  let showOnlyNewcomer = false;
+  window.toggleNewcomerFilter = function() {
+    showOnlyNewcomer = !showOnlyNewcomer;
+    const btn = document.getElementById('btnFilterNewcomer');
+    if (showOnlyNewcomer) {
+      btn.style.background = 'rgba(93,235,184,0.15)';
+      btn.style.color = '#5debb8';
+      btn.style.borderColor = 'rgba(93,235,184,0.5)';
+    } else {
+      btn.style.background = '';
+      btn.style.color = '';
+      btn.style.borderColor = 'rgba(93,235,184,0.3)';
+    }
+    currentPage = 1;
+    renderTable();
+  };
+
   // ── 행 생성 ──
   function siteBadge(site) {
     const cls = {
@@ -519,6 +537,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     
     if (showOnlyBookmarks) {
       data = data.filter(j => bookmarks.includes(j.id));
+    }
+    
+    if (showOnlyNewcomer) {
+      data = data.filter(j => 
+        j.experience.includes('신입') || 
+        j.experience.includes('인턴') || 
+        j.experience.includes('무관') || 
+        j.experience.includes('미기재')
+      );
     }
     
     data = getSorted(data);
