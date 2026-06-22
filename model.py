@@ -11,6 +11,8 @@ class JobPosting:
     link: str
     experience: str = "경력무관"
     education: str = "학력무관"
+    location: str = "지역무관"
+    company_size: str = "미기재"
     score: int = 0
 
     def to_dict(self) -> Dict:

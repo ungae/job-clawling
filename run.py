@@ -10,22 +10,52 @@ def load_config():
     with open('config.yaml', 'r', encoding='utf-8') as f:
         return yaml.safe_load(f)
 
-# 신입/인턴/무관이 없고 경력만 명시된 공고는 제외
-INCLUDE_WORDS = ['신입', '인턴', '경력무관', '무관']
+# 신입/인턴/무관 허용어 (이외 경력은 제외)
+ALLOWED_EXP = ['신입', '무관', '인턴', '미기재']
 CAREER_PATTERN = re.compile(r'경력\s*\d|경력직|경력자|경력\s*채용|경력\s*모집')
 
-def is_career_only(p: JobPosting) -> bool:
-    title = p.title
-    # 포함 키워드가 있으면 유지
-    if any(w in title for w in INCLUDE_WORDS):
+LARGE_CORP = ['삼성', 'lg', 'sk', '현대', '기아', '롯데', 'cj', '신세계', '한화', 'gs', 'kt', '카카오', '네이버', '라인', '쿠팡', '배달의민족', '우아한형제들', '토스', '비바리퍼블리카', '당근', '야놀자', '넥슨', '엔씨소프트', '넷마블', '신한', '국민', '하나은행', '우리은행']
+ALLOWED_LOC = ['서울', '경기', '인천', '판교', '분당', '성남', '미기재', '전국']
+BAD_ROLES = ['개발자', '디자이너', '엔지니어', '프론트엔드', '백엔드', '퍼블리셔', '웹개발', '앱개발', '서버', '인프라', '데이터엔지니어']
+
+def determine_company_size(p: JobPosting) -> str:
+    c_name = p.company.lower()
+    for lc in LARGE_CORP:
+        if lc in c_name:
+            return '대기업'
+    
+    is_startup_site = 'wanted.co.kr' in p.link or 'jumpit.co.kr' in p.link
+    if is_startup_site or '랩스' in c_name or '스튜디오' in c_name or '컴퍼니' in c_name or '코퍼레이션' in c_name:
+        return '스타트업'
+        
+    return '중소/중견'
+
+def is_valid_job(p: JobPosting) -> bool:
+    title = p.title.lower()
+    req = p.requirements.lower()
+    exp = p.experience.lower()
+    loc = p.location.lower()
+    
+    # 1. 대기업 제외
+    p.company_size = determine_company_size(p)
+    if p.company_size == '대기업':
         return False
-    # 명확한 경력 패턴이 있으면 제외
-    if CAREER_PATTERN.search(title):
-        return True
-    # 단순 '경력' 단어가 있어도 제외 (신입/인턴 없는 경우)
-    if '경력' in title:
-        return True
-    return False
+        
+    # 2. 신입/무관 만 남기기
+    if not any(a in exp for a in ALLOWED_EXP):
+        return False
+    if CAREER_PATTERN.search(title) and not any(a in title for a in ALLOWED_EXP):
+        return False
+        
+    # 3. 지역(서울/경기) 필터
+    if not any(l in loc for l in ALLOWED_LOC):
+        return False
+        
+    # 4. 개발/디자인 제외
+    if any(b in title or b in req for b in BAD_ROLES):
+        return False
+        
+    return True
 
 def score_job(p: JobPosting) -> int:
     score = 0
@@ -66,9 +96,9 @@ def main():
         if key not in seen:
             uniq_posts.append(p)
             seen.add(key)
-    # 경력 전용 공고 제외
+    # 강력 필터링 (신입/무관, 지역, 대기업제외, 요건제외)
     before = len(uniq_posts)
-    filtered_posts = [p for p in uniq_posts if not is_career_only(p)]
+    filtered_posts = [p for p in uniq_posts if is_valid_job(p)]
     
     # 스코어링 및 정렬
     for p in filtered_posts:

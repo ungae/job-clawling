@@ -64,9 +64,12 @@ def parse_saramin(html: str) -> List[JobPosting]:
         
         # 사람인은 보통 .job_condition 안의 span들에 [지역, 경력, 학력, 근무형태] 순으로 표시됨
         job_cond_tags = item.select('.job_condition span')
+        location = '미기재'
         experience = '미기재'
         education = '미기재'
         if job_cond_tags:
+            if len(job_cond_tags) > 0:
+                location = job_cond_tags[0].get_text(strip=True)
             if len(job_cond_tags) > 1:
                 experience = job_cond_tags[1].get_text(strip=True)
             if len(job_cond_tags) > 2:
@@ -76,7 +79,7 @@ def parse_saramin(html: str) -> List[JobPosting]:
             urllib.parse.urljoin('https://www.saramin.co.kr', link_tag['href'])
             if link_tag and link_tag.has_attr('href') else '#'
         )
-        postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
+        postings.append(JobPosting(company, title, requirements, deadline, link, experience, education, location))
     return postings
 
 
@@ -113,14 +116,16 @@ def parse_jobkorea(html: str) -> List[JobPosting]:
         
         exp_tag      = item.select_one('.option span.exp')
         edu_tag      = item.select_one('.option span.edu')
+        loc_tag      = item.select_one('.option span.loc')
         experience   = exp_tag.get_text(strip=True) if exp_tag else '미기재'
         education    = edu_tag.get_text(strip=True) if edu_tag else '미기재'
+        location     = loc_tag.get_text(strip=True) if loc_tag else '미기재'
         
         link = (
             urllib.parse.urljoin('https://www.jobkorea.co.kr', link_tag['href'])
             if link_tag and link_tag.has_attr('href') else '#'
         )
-        postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
+        postings.append(JobPosting(company, title, requirements, deadline, link, experience, education, location))
     return postings
 
 
@@ -169,7 +174,8 @@ def crawl_wanted(keyword: str, max_results: int) -> List[JobPosting]:
             link = f'https://www.wanted.co.kr/wd/{job_id}' if job_id else '#'
             experience = '무관/미기재'
             education = '무관/미기재'
-            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
+            location = job.get('address', {}).get('location', '미기재')
+            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education, location))
         offset += per_page
         if len(jobs) < per_page:
             break
@@ -229,7 +235,8 @@ def crawl_linkareer(keyword: str, max_results: int) -> List[JobPosting]:
             link   = f'https://linkareer.com/activity/{act_id}' if act_id else '#'
             experience = '신입/인턴'
             education = '무관/미기재'
-            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
+            location = '미기재'
+            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education, location))
             new_count += 1
 
         if new_count == 0:
@@ -279,7 +286,10 @@ def crawl_jumpit(keyword: str, max_results: int) -> List[JobPosting]:
                 experience = '경력무관'
             education = '무관/미기재'
             
-            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
+            locations = job.get('locations', [])
+            location = locations[0] if locations else '미기재'
+            
+            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education, location))
             
         page += 1
     return postings[:max_results]

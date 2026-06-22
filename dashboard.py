@@ -194,12 +194,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .col-no    { width: 46px; text-align: center; color: var(--text-muted); font-size: 12px; }
     .col-co    { min-width: 110px; font-weight: 600; color: #e8eaf6; }
     .col-pos   { min-width: 200px; color: #c5c8e8; }
-    .col-site  { width: 80px; text-align: center; }
+    .col-site  { width: 70px; text-align: center; }
+    .col-size  { width: 70px; text-align: center; font-weight: 600; }
+    .col-loc   { width: 80px; text-align: center; color: #a89fff; font-size: 12px; }
     .col-exp   { width: 90px; text-align: center; color: var(--text-muted); font-size: 12px; }
-    .col-edu   { width: 90px; text-align: center; color: var(--text-muted); font-size: 12px; }
-    .col-edate { width: 100px; text-align: center; }
-    .col-link  { width: 70px; text-align: center; }
-    .col-ind   { min-width: 160px; color: var(--text-muted); font-size: 12px; }
+    .col-edu   { width: 80px; text-align: center; color: var(--text-muted); font-size: 12px; }
+    .col-edate { width: 90px; text-align: center; }
+    .col-link  { width: 60px; text-align: center; }
+    .col-ind   { min-width: 140px; color: var(--text-muted); font-size: 12px; }
 
     .site-badge {
       display: inline-block; padding: 2px 8px; border-radius: 6px;
@@ -284,7 +286,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <div style="display:flex; gap:12px; margin-bottom:20px; align-items:center; flex-wrap:wrap;">
         <input type="text" id="searchInput" class="search-input" placeholder="기업명, 포지션, 스택 검색 (예: PM, 카카오, 기획)...">
         <button id="btnFilterBookmark" class="btn-bookmark-filter" onclick="toggleBookmarkFilter()">⭐ 찜한 공고만</button>
-        <button id="btnFilterNewcomer" class="btn-bookmark-filter" style="border-color: rgba(93,235,184,0.3);" onclick="toggleNewcomerFilter()">🌱 신입/무관 공고만</button>
       </div>
       <div class="result-count"><b id="visibleCount">0</b>건 표시 중</div>
     </div>
@@ -295,11 +296,13 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <th class="th-blue" id="sh-no">순위</th>
             <th class="th-blue sortable" id="sh-company" data-col="company">회사명 <span class="sort-icon">⇅</span></th>
             <th class="th-blue sortable" id="sh-title"   data-col="title">  포지션 <span class="sort-icon">⇅</span></th>
-            <th class="th-blue">공고 사이트</th>
-            <th class="th-blue sortable" data-col="experience">모집구분 <span class="sort-icon">⇅</span></th>
-            <th class="th-blue">학력요건</th>
+            <th class="th-blue">출처</th>
+            <th class="th-blue sortable" data-col="company_size">규모 <span class="sort-icon">⇅</span></th>
+            <th class="th-blue sortable" data-col="location">지역 <span class="sort-icon">⇅</span></th>
+            <th class="th-blue sortable" data-col="experience">구분 <span class="sort-icon">⇅</span></th>
+            <th class="th-blue">학력</th>
             <th class="th-blue sortable" id="sh-deadline" data-col="deadline">마감일 <span class="sort-icon">⇅</span></th>
-            <th class="th-blue">공고 링크</th>
+            <th class="th-blue">링크</th>
             <th class="th-orange">우선순위 요건/스택</th>
           </tr>
         </thead>
@@ -381,6 +384,8 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (sortCol === 'title')    { av = a.title;            bv = b.title; }
       if (sortCol === 'deadline') { av = deadlineSort(a.deadline); bv = deadlineSort(b.deadline); }
       if (sortCol === 'experience') { av = a.experience;     bv = b.experience; }
+      if (sortCol === 'location')   { av = a.location;       bv = b.location; }
+      if (sortCol === 'company_size') { av = a.company_size; bv = b.company_size; }
       if (sortCol === 'score')    { av = a.score;            bv = b.score; }
       
       if (sortCol === 'score') {
@@ -436,23 +441,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     renderTable();
   };
 
-  let showOnlyNewcomer = false;
-  window.toggleNewcomerFilter = function() {
-    showOnlyNewcomer = !showOnlyNewcomer;
-    const btn = document.getElementById('btnFilterNewcomer');
-    if (showOnlyNewcomer) {
-      btn.style.background = 'rgba(93,235,184,0.15)';
-      btn.style.color = '#5debb8';
-      btn.style.borderColor = 'rgba(93,235,184,0.5)';
-    } else {
-      btn.style.background = '';
-      btn.style.color = '';
-      btn.style.borderColor = 'rgba(93,235,184,0.3)';
-    }
-    currentPage = 1;
-    renderTable();
-  };
-
   // ── 행 생성 ──
   function siteBadge(site) {
     const cls = {
@@ -478,12 +466,16 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     const starClass = isBookmarked ? 'star-btn active' : 'star-btn';
     
     const expStr = job.experience === '신입' ? '<span style="color:#5debb8; font-weight:700;">신입</span>' : job.experience;
+    const sizeColor = job.company_size === '스타트업' ? '#ff6584' : '#6ee7ff';
+    const sizeStr = `<span style="color:${sizeColor}; border:1px solid ${sizeColor}40; padding:2px 6px; border-radius:4px; font-size:11px;">${job.company_size}</span>`;
     
     return `<tr>
       <td class="col-no">${no}위</td>
       <td class="col-co">${job.company}</td>
       <td class="col-pos"><span class="${starClass}" data-id="${job.link}" onclick="toggleBookmark(this.dataset.id)">${starStr}</span> ${job.title}</td>
       <td class="col-site">${siteBadge(job.site)}</td>
+      <td class="col-size">${sizeStr}</td>
+      <td class="col-loc">${job.location}</td>
       <td class="col-exp">${expStr}</td>
       <td class="col-edu">${job.education}</td>
       <td class="col-edate"><span class="${dc}">${job.deadline}</span></td>
@@ -537,15 +529,6 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     
     if (showOnlyBookmarks) {
       data = data.filter(j => bookmarks.includes(j.id));
-    }
-    
-    if (showOnlyNewcomer) {
-      data = data.filter(j => 
-        j.experience.includes('신입') || 
-        j.experience.includes('인턴') || 
-        j.experience.includes('무관') || 
-        j.experience.includes('미기재')
-      );
     }
     
     data = getSorted(data);
@@ -618,6 +601,8 @@ def generate_html(postings: List[JobPosting], keywords: List[str]) -> str:
             'link':         html_module.escape(p.link),
             'experience':   html_module.escape(p.experience),
             'education':    html_module.escape(p.education),
+            'location':     html_module.escape(p.location),
+            'company_size': html_module.escape(p.company_size),
             'score':        p.score,
             'id':           p.link,
             'site':         _detect_site(p.link),
