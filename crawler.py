@@ -61,11 +61,22 @@ def parse_saramin(html: str) -> List[JobPosting]:
         title        = title_tag.get_text(strip=True)    if title_tag    else 'N/A'
         requirements = req_tag.get_text(strip=True)      if req_tag      else 'N/A'
         deadline     = deadline_tag.get_text(strip=True) if deadline_tag else '상시'
+        
+        # 사람인은 보통 .job_condition 안의 span들에 [지역, 경력, 학력, 근무형태] 순으로 표시됨
+        job_cond_tags = item.select('.job_condition span')
+        experience = '미기재'
+        education = '미기재'
+        if job_cond_tags:
+            if len(job_cond_tags) > 1:
+                experience = job_cond_tags[1].get_text(strip=True)
+            if len(job_cond_tags) > 2:
+                education = job_cond_tags[2].get_text(strip=True)
+                
         link = (
             urllib.parse.urljoin('https://www.saramin.co.kr', link_tag['href'])
             if link_tag and link_tag.has_attr('href') else '#'
         )
-        postings.append(JobPosting(company, title, requirements, deadline, link))
+        postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
     return postings
 
 
@@ -99,11 +110,17 @@ def parse_jobkorea(html: str) -> List[JobPosting]:
         title        = title_tag.get_text(strip=True)    if title_tag    else 'N/A'
         requirements = req_tag.get_text(strip=True)      if req_tag      else 'N/A'
         deadline     = deadline_tag.get_text(strip=True) if deadline_tag else '상시'
+        
+        exp_tag      = item.select_one('.option span.exp')
+        edu_tag      = item.select_one('.option span.edu')
+        experience   = exp_tag.get_text(strip=True) if exp_tag else '미기재'
+        education    = edu_tag.get_text(strip=True) if edu_tag else '미기재'
+        
         link = (
             urllib.parse.urljoin('https://www.jobkorea.co.kr', link_tag['href'])
             if link_tag and link_tag.has_attr('href') else '#'
         )
-        postings.append(JobPosting(company, title, requirements, deadline, link))
+        postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
     return postings
 
 
@@ -150,7 +167,9 @@ def crawl_wanted(keyword: str, max_results: int) -> List[JobPosting]:
             ) or 'N/A'
             job_id = job.get('id')
             link = f'https://www.wanted.co.kr/wd/{job_id}' if job_id else '#'
-            postings.append(JobPosting(company, title, requirements, deadline, link))
+            experience = '무관/미기재'
+            education = '무관/미기재'
+            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
         offset += per_page
         if len(jobs) < per_page:
             break
@@ -208,7 +227,9 @@ def crawl_linkareer(keyword: str, max_results: int) -> List[JobPosting]:
             requirements = ','.join(filter(None, cat_names)) or 'N/A'
             act_id = val.get('id')
             link   = f'https://linkareer.com/activity/{act_id}' if act_id else '#'
-            postings.append(JobPosting(company, title, requirements, deadline, link))
+            experience = '신입/인턴'
+            education = '무관/미기재'
+            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
             new_count += 1
 
         if new_count == 0:
@@ -246,7 +267,19 @@ def crawl_jumpit(keyword: str, max_results: int) -> List[JobPosting]:
             deadline = closed_at[:10].replace('-', '.') if closed_at else '상시'
             job_id = job.get('id')
             link = f'https://www.jumpit.co.kr/position/{job_id}' if job_id else '#'
-            postings.append(JobPosting(company, title, requirements, deadline, link))
+            
+            newcomer = job.get('newcomer', False)
+            minCareer = job.get('minCareer', 0)
+            maxCareer = job.get('maxCareer', 0)
+            if newcomer:
+                experience = '신입'
+            elif minCareer > 0:
+                experience = f'경력 {minCareer}~{maxCareer}년'
+            else:
+                experience = '경력무관'
+            education = '무관/미기재'
+            
+            postings.append(JobPosting(company, title, requirements, deadline, link, experience, education))
             
         page += 1
     return postings[:max_results]

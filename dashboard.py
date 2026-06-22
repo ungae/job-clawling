@@ -195,11 +195,11 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     .col-co    { min-width: 110px; font-weight: 600; color: #e8eaf6; }
     .col-pos   { min-width: 200px; color: #c5c8e8; }
     .col-site  { width: 80px; text-align: center; }
-    .col-sdate { width: 80px; text-align: center; color: var(--text-muted); font-size: 12px; }
+    .col-exp   { width: 90px; text-align: center; color: var(--text-muted); font-size: 12px; }
+    .col-edu   { width: 90px; text-align: center; color: var(--text-muted); font-size: 12px; }
     .col-edate { width: 100px; text-align: center; }
     .col-link  { width: 70px; text-align: center; }
     .col-ind   { min-width: 160px; color: var(--text-muted); font-size: 12px; }
-    .col-rev   { width: 70px; text-align: center; color: var(--text-muted); font-size: 12px; }
 
     .site-badge {
       display: inline-block; padding: 2px 8px; border-radius: 6px;
@@ -291,19 +291,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       <table>
         <thead>
           <tr class="thead-group" id="theadGroup">
-            <th class="th-blue" id="sh-no">순번</th>
+            <th class="th-blue" id="sh-no">순위</th>
             <th class="th-blue sortable" id="sh-company" data-col="company">회사명 <span class="sort-icon">⇅</span></th>
             <th class="th-blue sortable" id="sh-title"   data-col="title">  포지션 <span class="sort-icon">⇅</span></th>
             <th class="th-blue">공고 사이트</th>
-            <th class="th-blue">시작일</th>
+            <th class="th-blue sortable" data-col="experience">모집구분 <span class="sort-icon">⇅</span></th>
+            <th class="th-blue">학력요건</th>
             <th class="th-blue sortable" id="sh-deadline" data-col="deadline">마감일 <span class="sort-icon">⇅</span></th>
             <th class="th-blue">공고 링크</th>
-            <th class="th-orange" colspan="2">회사 정보</th>
-          </tr>
-          <tr class="thead-sub">
-            <th class="th-blue" colspan="7"></th>
-            <th class="th-orange">산업군</th>
-            <th class="th-orange">매출외형</th>
+            <th class="th-orange">우선순위 요건/스택</th>
           </tr>
         </thead>
         <tbody id="tableBody"></tbody>
@@ -383,6 +379,12 @@ HTML_TEMPLATE = """<!DOCTYPE html>
       if (sortCol === 'company')  { av = a.company;         bv = b.company; }
       if (sortCol === 'title')    { av = a.title;            bv = b.title; }
       if (sortCol === 'deadline') { av = deadlineSort(a.deadline); bv = deadlineSort(b.deadline); }
+      if (sortCol === 'experience') { av = a.experience;     bv = b.experience; }
+      if (sortCol === 'score')    { av = a.score;            bv = b.score; }
+      
+      if (sortCol === 'score') {
+         return sortAsc ? av - bv : bv - av;
+      }
       const cmp = av.localeCompare(bv, 'ko');
       return sortAsc ? cmp : -cmp;
     });
@@ -453,16 +455,19 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   }
   function makeRow(job, no) {
     const dc = dlClass(job.deadline);
-    const isBookmarked = bookmarks.includes(job.link);
+    const isBookmarked = bookmarks.includes(job.id);
     const starStr = isBookmarked ? '⭐' : '☆';
     const starClass = isBookmarked ? 'star-btn active' : 'star-btn';
     
+    const expStr = job.experience === '신입' ? '<span style="color:#5debb8; font-weight:700;">신입</span>' : job.experience;
+    
     return `<tr>
-      <td class="col-no">${no}</td>
+      <td class="col-no">${no}위</td>
       <td class="col-co">${job.company}</td>
-      <td class="col-pos"><span class="${starClass}" onclick="toggleBookmark('${job.link}')">${starStr}</span> ${job.title}</td>
+      <td class="col-pos"><span class="${starClass}" data-id="${job.link}" onclick="toggleBookmark(this.dataset.id)">${starStr}</span> ${job.title}</td>
       <td class="col-site">${siteBadge(job.site)}</td>
-      <td class="col-sdate">-</td>
+      <td class="col-exp">${expStr}</td>
+      <td class="col-edu">${job.education}</td>
       <td class="col-edate"><span class="${dc}">${job.deadline}</span></td>
       <td class="col-link">
         <a class="link-btn" href="${job.link}" target="_blank">
@@ -470,8 +475,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
             <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
             <polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/>
           </svg>링크</a></td>
-      <td class="col-ind">${job.requirements}</td>
-      <td class="col-rev">-</td>
+      <td class="col-ind" style="line-height:1.4;">${job.requirements}</td>
     </tr>`;
   }
 
@@ -514,7 +518,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     ) : ALL_JOBS;
     
     if (showOnlyBookmarks) {
-      data = data.filter(j => bookmarks.includes(j.link));
+      data = data.filter(j => bookmarks.includes(j.id));
     }
     
     data = getSorted(data);
@@ -585,6 +589,10 @@ def generate_html(postings: List[JobPosting], keywords: List[str]) -> str:
             'requirements': html_module.escape(p.requirements),
             'deadline':     html_module.escape(p.deadline),
             'link':         html_module.escape(p.link),
+            'experience':   html_module.escape(p.experience),
+            'education':    html_module.escape(p.education),
+            'score':        p.score,
+            'id':           p.link,
             'site':         _detect_site(p.link),
         }
         for p in postings

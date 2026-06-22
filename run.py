@@ -27,6 +27,28 @@ def is_career_only(p: JobPosting) -> bool:
         return True
     return False
 
+def score_job(p: JobPosting) -> int:
+    score = 0
+    title = p.title.lower()
+    req = p.requirements.lower()
+    
+    high_keywords = ['ai', 'llm', '에이전트', '생성형', '시니어', 'pm', '프로덕트', '기획', '플랫폼', '커뮤니티']
+    exclude_keywords = ['영업', '마케팅', '디자인', '백엔드', '프론트엔드', '개발자', '엔지니어', '세일즈', '회계', '재무', '인사']
+    
+    if any(ex in title for ex in exclude_keywords):
+        if not any(hk in title for hk in ['pm', '기획', '프로덕트']):
+            return -100
+            
+    for hk in high_keywords:
+        if hk in title:
+            score += 5
+            
+    for hk in high_keywords:
+        if hk in req:
+            score += 2
+            
+    return score
+
 def main():
     cfg = load_config()
     keywords = cfg['keywords']
@@ -47,8 +69,16 @@ def main():
     # 경력 전용 공고 제외
     before = len(uniq_posts)
     filtered_posts = [p for p in uniq_posts if not is_career_only(p)]
-    print(f"[Filter] {before}개 수집 -> 경력 제외 후 {len(filtered_posts)}개")
-    html = generate_html(filtered_posts, keywords)
+    
+    # 스코어링 및 정렬
+    for p in filtered_posts:
+        p.score = score_job(p)
+        
+    filtered_posts.sort(key=lambda x: x.score, reverse=True)
+    top_100 = filtered_posts[:100]
+    
+    print(f"[Filter] {before}개 수집 -> 경력 제외 후 {len(filtered_posts)}개 -> Top 100 추출")
+    html = generate_html(top_100, keywords)
     out_path = os.path.abspath('index.html')
     with open(out_path, 'w', encoding='utf-8') as f:
         f.write(html)
