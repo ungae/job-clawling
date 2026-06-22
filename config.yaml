@@ -1,0 +1,24 @@
+keywords:
+  - 서비스 기획
+  - 프로덕트 매니저
+  - PM
+  - 퍼포먼스 마케팅
+  - 콘텐츠 마케터
+  - 디지털 마케팅
+  - 채용형 인턴
+  - AI 기획
+  - 생성형 AI
+  - LLM
+  - AI 에이전트
+  - 시니어 서비스
+  - 커뮤니티 기획
+  - 앱 기획
+  - UX 기획
+  - 플랫폼 기획
+sites:
+  saramin: "https://www.saramin.co.kr/zf_user/search/recruit?searchType=search&searchword={keyword}"
+  jobkorea: "https://www.jobkorea.co.kr/Search/?stext={keyword}&Page_No={page}"
+  wanted: "https://www.wanted.co.kr/api/v4/jobs?search_query={keyword}&limit=50&offset={offset}&country=kr"
+  linkareer: "https://linkareer.com/list/recruit?filterBy_activityTypes=JOB&keyword={keyword}&page={page}"
+max_results: 300
+user_agent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36"
