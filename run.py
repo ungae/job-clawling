@@ -55,6 +55,11 @@ def is_valid_job(p: JobPosting) -> bool:
     if any(b in title or b in req for b in BAD_ROLES):
         return False
         
+    # 5. 마감/종료된 공고 제외
+    dl = p.deadline.lower()
+    if '마감' in dl or '종료' in dl:
+        return False
+        
     return True
 
 def score_job(p: JobPosting) -> int:
@@ -62,7 +67,7 @@ def score_job(p: JobPosting) -> int:
     title = p.title.lower()
     req = p.requirements.lower()
     
-    high_keywords = ['ai', 'llm', '에이전트', '생성형', '시니어', 'pm', '프로덕트', '기획', '플랫폼', '커뮤니티']
+    high_keywords = ['ai', 'llm', '에이전트', '생성형', '시니어', 'pm', '프로덕트', '기획', '플랫폼']
     exclude_keywords = ['영업', '마케팅', '디자인', '백엔드', '프론트엔드', '개발자', '엔지니어', '세일즈', '회계', '재무', '인사']
     
     if any(ex in title for ex in exclude_keywords):
