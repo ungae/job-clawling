@@ -60,6 +60,18 @@ def is_valid_job(p: JobPosting) -> bool:
     if '마감' in dl or '종료' in dl:
         return False
         
+    # 날짜(YYYY.MM.DD)인 경우 과거 날짜인지 확인
+    import re, datetime
+    match = re.search(r'(\d{4})[./-](\d{1,2})[./-](\d{1,2})', dl)
+    if match:
+        try:
+            y, m, d = map(int, match.groups())
+            deadline_date = datetime.date(y, m, d)
+            if deadline_date < datetime.date.today():
+                return False
+        except ValueError:
+            pass
+            
     return True
 
 def score_job(p: JobPosting) -> int:
