@@ -1,17 +1,29 @@
 keywords:
+  # AI / 기획 계열
   - 서비스 기획
   - 프로덕트 매니저
   - PM
-  - 디지털 마케팅
-  - 채용형 인턴
   - AI 기획
   - 생성형 AI
   - LLM
   - AI 에이전트
-  - 시니어 서비스
   - 앱 기획
   - UX 기획
   - 플랫폼 기획
+  # 콘텐츠 / SNS / 마케팅 계열 (더나은인재들 경력 활용)
+  - 콘텐츠 기획
+  - SNS 마케팅
+  - 디지털 마케팅
+  - 유튜브 운영
+  - 숏폼 콘텐츠
+  - 콘텐츠 마케팅
+  - 바이럴 마케팅
+  - 퍼포먼스 마케팅
+  - 영상 기획
+  - 채널 운영
+  - 그로스 마케팅
+  - 채용형 인턴
+  - 시니어 서비스
 sites:
   saramin: "https://www.saramin.co.kr/zf_user/search/recruit?searchType=search&searchword={keyword}"
   jobkorea: "https://www.jobkorea.co.kr/Search/?stext={keyword}&Page_No={page}"

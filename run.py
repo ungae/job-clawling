@@ -154,15 +154,42 @@ def is_valid_job(p: JobPosting) -> bool:
     return True
 
 def score_job(p: JobPosting) -> int:
+    """
+    임준모 포트폴리오 기반 스코어링:
+    - 콘텐츠 기획 / SNS·유튜브 운영 / 마케팅 그로스 (더나은인재들 경력)
+    - AI 기획 / PM / 플랫폼 기획 (Polaris, AIClear PTT 프로젝트)
+    - 시니어 케어 / B2G 사업기획 (시니어 안심-Link 경력)
+    """
     score = 0
     title = p.title.lower()
     req = p.requirements.lower()
     
-    high_keywords = ['ai', 'llm', '에이전트', '생성형', '시니어', 'pm', '프로덕트', '기획', '플랫폼']
-    exclude_keywords = ['영업', '마케팅', '디자인', '백엔드', '프론트엔드', '개발자', '엔지니어', '세일즈', '회계', '재무', '인사']
+    # ── 고점 키워드: 타이틀 +5점, 요건 +2점 ──
+    high_keywords = [
+        # AI / 기획 계열
+        'ai', 'llm', '에이전트', '생성형', 'pm', '프로덕트', '기획', '플랫폼',
+        # 콘텐츠 / SNS / 유튜브 계열 (더나은인재들 경력)
+        '콘텐츠', 'sns', '유튜브', '숏폼', '쇼츠', '영상', '바이럴', '크리에이터',
+        '채널', '인스타', '틱톡', '릴스', '그로스', '퍼포먼스', '마케팅',
+        # 커뮤니티 / 브랜드
+        '커뮤니티', '브랜드', '팬덤', '인플루언서',
+        # 기타 강점
+        '시니어', '복지', '사업개발', 'bizdev',
+    ]
     
-    if any(ex in title for ex in exclude_keywords):
-        if not any(hk in title for hk in ['pm', '기획', '프로덕트']):
+    # ── 완전 제외 키워드 (직군 자체가 맞지 않는 것) ──
+    # 마케팅은 제외 목록에서 제거 → 콘텐츠/디지털 마케팅 공고 허용
+    hard_exclude = ['백엔드', '프론트엔드', '개발자', '엔지니어', '세일즈', '회계', '재무']
+    
+    # 순수 영업직·인사직은 제외 (단, '마케팅 기획', '콘텐츠 마케팅' 등은 허용)
+    soft_exclude = ['영업', '인사', '디자인']
+    
+    if any(ex in title for ex in hard_exclude):
+        return -100
+    
+    if any(ex in title for ex in soft_exclude):
+        # 기획/콘텐츠/마케팅 맥락이면 살리기
+        if not any(hk in title for hk in ['pm', '기획', '프로덕트', '콘텐츠', '마케팅', 'sns', '채널', '브랜드']):
             return -100
             
     for hk in high_keywords:
